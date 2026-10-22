@@ -1,0 +1,77 @@
+name: Continuous Integration & Delivery
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    name: Build, Test & Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven & Run Testcontainers Tests
+        run: mvn clean verify -B
+
+      - name: JaCoCo Test Coverage Report
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: "**/target/site/jacoco/jacoco.xml"
+
+      - name: OWASP Dependency Check Scan
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'payment-platform'
+          path: '.'
+          format: 'HTML'
+
+      - name: Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+  kind-deploy-smoke:
+    name: Deploy to Kind Kubernetes & Smoke Test
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Kind Cluster
+        uses: helm/kind-action@v1.9.0
+        with:
+          cluster_name: payment-cluster
+          config: k8s/kind-cluster.yaml
+
+      - name: Apply Kubernetes Manifests
+        run: |
+          kubectl apply -f k8s/postgres.yaml
+          kubectl apply -f k8s/kafka.yaml
+          kubectl apply -f k8s/payment-api.yaml
+          kubectl wait --for=condition=ready pod -l app=payment-api --timeout=120s
+
+      - name: Run Synthetic Ingestion Smoke Test
+        run: |
+          PAYMENT_HOST=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+          echo "Smoke testing payment-api at ${PAYMENT_HOST}..."
+          curl -f -X POST "http://localhost:8080/v1/payments" \
+            -H "Idempotency-Key: smoke-test-key-001" \
+            -H "Content-Type: application/json" \
+            -d '{"sourceAccountId":"acc_cust_101","destinationAccountId":"acc_merch_202","amount":25.00,"currency":"USD","paymentMethod":"CARD"}'

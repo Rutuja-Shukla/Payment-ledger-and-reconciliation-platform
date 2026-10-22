@@ -1,0 +1,6 @@
+{
+  "name": "Payment Ledger & Reconciliation Platform",
+  "description": "Payment ledger and reconciliation platform is an enterprise-grade financial infrastructure application and distributed systems blueprint designed for mission-critical payment workflows. It solves the hardest challenges in modern fintech—eliminating dual-write state divergence, preventing concurrent double-spending, maintaining immutable balanced books (∑ Debits ≡ ∑ Credits), and automating multi-source 3-way settlement reconciliation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,43 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Payment Ingestion Throughput (req/sec)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count{job='payment-api', uri='/v1/payments'}[1m])",
+          "legendFormat": "Payments Ingested"
+        }
+      ]
+    },
+    {
+      "title": "Outbox Relay Publication Lag",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "payment_outbox_pending_count{job='payment-api'}",
+          "legendFormat": "Pending Outbox Rows"
+        }
+      ]
+    },
+    {
+      "title": "Unresolved Reconciliation Breaks",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "recon_unresolved_breaks_total{job='recon-service'}",
+          "legendFormat": "Active Breaks"
+        }
+      ]
+    }
+  ],
+  "title": "Payment Platform Overview & Observability",
+  "version": 1
+}
